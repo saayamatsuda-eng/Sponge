@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ISナビ - 0.0秒 IS Realtime Executive Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-main: #eef4ff;
+      --card-bg: #ffffff;
+      --primary-blue: #0052ff;
+      --btn-gray: #cccccc;
+      --text-black: #111111;
+      --text-muted: #888888;
+      --border-blue: #0052ff;
+      --chat-customer: #333333;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Noto Sans JP', sans-serif; }
+    body { background-color: var(--bg-main); color: var(--text-black); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 1.5rem; }
+    .app-container { width: 100%; max-width: 900px; position: relative; }
+    .screen { display: none; animation: fadeIn 0.25s ease-in-out; }
+    .screen.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .card { background: var(--card-bg); border-radius: 24px; padding: 2.5rem 2rem; box-shadow: 0 4px 20px rgba(0, 82, 255, 0.05); margin-bottom: 1.5rem; }
+    .card-title { font-size: 1.35rem; font-weight: 700; margin-bottom: 1.5rem; }
+    .form-row { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .input-pill { flex: 1; min-width: 180px; height: 52px; border: 2px solid var(--border-blue); border-radius: 26px; padding: 0 1.2rem; display: flex; align-items: center; gap: 0.6rem; background: #ffffff; }
+    .input-pill i { color: var(--primary-blue); font-size: 1.1rem; }
+    .input-pill input, .input-pill select { width: 100%; border: none; outline: none; font-size: 0.95rem; color: var(--text-black); background: transparent; }
+    .input-pill select { cursor: pointer; appearance: none; -webkit-appearance: none; }
+    .required-star { color: #ff0000; font-weight: 700; margin-left: -0.5rem; margin-right: 0.2rem; display: flex; align-items: center; font-size: 1.2rem; }
+    .btn-action { width: 100%; height: 64px; border-radius: 32px; border: none; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.8rem; cursor: pointer; transition: all 0.2s; }
+    .btn-disabled { background-color: var(--btn-gray) !important; color: #ffffff !important; cursor: not-allowed; box-shadow: none !important; }
+    .btn-primary { background-color: var(--primary-blue); color: #ffffff; box-shadow: 0 4px 16px rgba(0, 82, 255, 0.3); }
+    .btn-secondary { background-color: #ffffff; color: var(--primary-blue); border: 2px solid var(--primary-blue); }
+    .job-summary-card { background-color: var(--primary-blue); color: #ffffff; border-radius: 24px; padding: 1.5rem 2rem; margin-bottom: 1.2rem; box-shadow: 0 4px 16px rgba(0, 82, 255, 0.2); }
+    .job-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 1rem; }
+    .job-tags-row { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+    .job-tag { background: #ffffff; color: var(--text-black); padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: 0.4rem; }
+    .job-tag-dark { background: #333333; color: #ffffff; }
+    .chat-container { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; min-height: 220px; max-height: 380px; overflow-y: auto; padding: 0.5rem; }
+    .chat-bubble-customer { background-color: var(--chat-customer); color: #ffffff; padding: 1rem 1.4rem; border-radius: 20px 20px 20px 6px; align-self: flex-start; max-width: 80%; font-size: 0.95rem; line-height: 1.5; word-break: break-all; }
+    .chat-bubble-operator { background-color: var(--primary-blue); color: #ffffff; padding: 1rem 1.4rem; border-radius: 20px 20px 6px 20px; align-self: flex-end; max-width: 80%; font-size: 0.95rem; line-height: 1.5; word-break: break-all; }
+    .typing-cursor::after { content: '｜'; animation: blinkCursor 0.8s infinite; font-weight: 700; }
+    @keyframes blinkCursor { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    .prompt-bubble-next { background-color: #ffffff; color: var(--text-black); border-radius: 24px; padding: 1.2rem 1.6rem; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06); display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.95rem; line-height: 1.5; margin-top: auto; }
+    .prompt-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 700; color: var(--primary-blue); margin-bottom: 0.2rem; }
+    .phase-badge { display: inline-block; background-color: var(--primary-blue); color: #ffffff; font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 6px; margin-bottom: 0.4rem; }
+    .candidate-option { background: #f8faff; border: 1px solid #d0e0ff; border-radius: 12px; padding: 0.8rem 1rem; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; line-height: 1.5; }
+    .candidate-option:hover { background: #eef4ff; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div id="screen1" class="screen active">
+      <div class="card">
+        <div class="card-title">ISナビ User登録</div>
+        <div class="form-row">
+          <div class="input-pill"><i class="fa-regular fa-user"></i><input type="text" id="regName" placeholder="first name" oninput="validateScreen1()"></div>
+          <div class="input-pill"><i class="fa-solid fa-phone"></i><input type="text" id="regTel" placeholder="tell number" oninput="validateScreen1()"></div>
+          <div class="input-pill"><i class="fa-regular fa-envelope"></i><input type="email" id="regMail" placeholder="mail address" oninput="validateScreen1()"></div>
+        </div>
+      </div>
+      <button id="btnStartUser" class="btn-action btn-disabled" onclick="goToScreen2()" disabled><i class="fa-regular fa-clipboard"></i> 登録してIS業務をはじめる</button>
+    </div>
+
+    <div id="screen2" class="screen">
+      <div class="card">
+        <div class="card-title">求人を登録する（任意）</div>
+        <div class="form-row">
+          <div class="input-pill"><input type="text" id="jobTitle" placeholder="職種を選択" oninput="updateJobPreview()"></div>
+          <div class="input-pill"><input type="text" id="jobSalary" placeholder="年収範囲を選択" oninput="updateJobPreview()"></div>
+          <div class="input-pill"><input type="text" id="jobLocation" placeholder="勤務地を選択" oninput="updateJobPreview()"></div>
+          <div class="input-pill"><i class="fa-solid fa-tag"></i><input type="text" id="jobKeywords" placeholder="キーワード" oninput="updateJobPreview()"></div>
+        </div>
+        <div class="form-row">
+          <div class="input-pill" style="width: 100%;"><i class="fa-solid fa-link"></i><input type="text" id="jobUrl" placeholder="掲載urlを入力" oninput="updateJobPreview()"></div>
+        </div>
+        <div class="card-title" style="margin-top: 1.8rem;">取引先責任者情報</div>
+        <div class="form-row">
+          <div class="input-pill" style="flex: 1;">
+            <select id="hookContent" onchange="validateScreen2()">
+              <option value="" disabled selected>フックコンテンツ</option>
+              <option value="展示会・ウェビナー">展示会・ウェビナー</option>
+              <option value="オーガニック">オーガニック</option>
+              <option value="過去失注">過去失注</option>
+            </select>
+          </div>
+          <span class="required-star">*</span>
+          <div class="input-pill" style="flex: 1;">
+            <select id="ssExisting" onchange="validateScreen2()">
+              <option value="" disabled selected>SS既存</option>
+              <option value="Sansan">Sansan</option>
+              <option value="Bill One">Bill One</option>
+              <option value="Contract One">Contract One</option>
+              <option value="なし">なし（新規）</option>
+            </select>
+          </div>
+          <span class="required-star">*</span>
+          <div class="input-pill" style="flex: 1.5;">
+            <select id="seminarDetail" onchange="validateScreen2()">
+              <option value="" disabled selected>セミナー詳細（展示会やウェビナーの場合）</option>
+              <option value="260526-27_第5回HR leaders 未来会議2026">260526-27_第5回HR leaders 未来会議2026</option>
+              <option value="260722_Climbers X Week 2026">260722_Climbers X Week 2026</option>
+              <option value="260316_人事戦略サミット 事業成長につながる人事施策を1日で">260316_人事戦略サミット 事業成長につながる人事施策を1日で</option>
+              <option value="260624_Acaric Summit Premium 人事・採用EXPO">260624_Acaric Summit Premium 人事・採用EXPO</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="jobPreviewBox" style="display: none;" class="job-summary-card">
+        <div class="job-title" id="prevTitle">システムエンジニア</div>
+        <div class="job-tags-row">
+          <div class="job-tag" id="prevLocTag"><i class="fa-solid fa-location-dot"></i> <span id="prevLoc">東京</span></div>
+          <div class="job-tag" id="prevSalTag"><i class="fa-solid fa-yen-sign"></i> <span id="prevSal">年収700万〜</span></div>
+          <div class="job-tag job-tag-dark" id="prevUrlTag" style="display:none;"><i class="fa-solid fa-link"></i> 掲載url</div>
+          <div class="job-tag" id="prevKwTag" style="background: #fff; border:none;"><i class="fa-solid fa-tag"></i> <span id="prevKw">#4年経験 #PM経験者歓迎</span></div>
+        </div>
+      </div>
+
+      <button id="btnStartCall" class="btn-action btn-disabled" onclick="startCallSession()" disabled><i class="fa-solid fa-phone"></i> 架電をはじめる</button>
+    </div>
+
+    <div id="screen3" class="screen">
+      <div id="activeJobBox" class="job-summary-card" style="display:none;">
+        <div class="job-title" id="activeTitle"></div>
+        <div class="job-tags-row">
+          <div class="job-tag" id="activeLocTag"><i class="fa-solid fa-location-dot"></i> <span id="activeLoc"></span></div>
+          <div class="job-tag" id="activeSalTag"><i class="fa-solid fa-yen-sign"></i> <span id="activeSal"></span></div>
+          <div class="job-tag job-tag-dark" id="activeUrlTag" style="display:none;"><i class="fa-solid fa-link"></i> 掲載url</div>
+          <div class="job-tag" id="activeKwTag"><i class="fa-solid fa-tag"></i> <span id="activeKw"></span></div>
+        </div>
+      </div>
+
+      <div class="chat-container" id="chatStream"></div>
+
+      <div class="prompt-bubble-next" id="nextPromptBar">
+        <div class="prompt-header">
+          <span><i class="fa-solid fa-bolt"></i> 最適トーク候補（AI自動学習連動）</span>
+          <span style="font-size: 0.7rem; color: #888; font-weight: normal;">※カードクリックで手動進行可能</span>
+        </div>
+        <div id="candidateList" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+      </div>
+
+      <button id="btnEndCall" class="btn-action btn-secondary" style="margin-top: 1.5rem;" onclick="endCallSession()"><i class="fa-solid fa-phone-slash"></i> 架電を終了する</button>
+    </div>
+
+    <div id="screen4" class="screen">
+      <div class="card" style="border: 2px solid var(--border-blue); text-align: center;">
+        <div id="transcriptSummaryText" style="font-size: 0.95rem; color: #555; line-height: 1.6; margin-bottom: 1rem; max-height: 180px; overflow-y: auto; text-align: left; padding: 0.5rem; white-space: pre-wrap;"></div>
+        <button class="btn-action" style="background:none; color:var(--primary-blue); font-size:0.85rem; height: auto;" onclick="copyTranscript()"><i class="fa-regular fa-copy"></i> 文字起こしログ全文をコピー</button>
+      </div>
+      <button class="btn-action btn-primary" style="margin-bottom: 1rem;" onclick="generateMemoAndAutoLearn()"><i class="fa-regular fa-clipboard"></i> ヒアリングメモを作成（成功ログとして学習）</button>
+      <button class="btn-action btn-secondary" onclick="resetToScreen2()"><i class="fa-solid fa-phone"></i> 次の架電へ</button>
+    </div>
+  </div>
+
+  <script>
+    const GEM_MEMO_URL = "https://gemini.google.com/gem/5ab53511cb24?usp=sharing";
+    let deepgramApiKey = "";
+    let globalQuestionsData = null;
+    let userProfile = { name: '', tel: '', mail: '' };
+    let speechTranscriptLogs = [];
+    let socketMic = null, socketSys = null;
+    let mediaRecorderMic = null, mediaRecorderSys = null;
+    let currentActiveBubble = null, currentAbortController = null;
+    let currentScriptFlow = [], currentOpeningIndex = 0;
+    
+    let autoFlowTimer = null;
+    let returnToScriptTimer = null;
+    const AUTO_FLOW_DELAY_MS = 10000;
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      const savedUser = localStorage.getItem('is_user_profile');
+      if (savedUser) {
+        userProfile = JSON.parse(savedUser);
+        document.getElementById('regName').value = userProfile.name || '';
+        document.getElementById('regTel').value = userProfile.tel || '';
+        document.getElementById('regMail').value = userProfile.mail || '';
+        validateScreen1();
+      }
+      try {
+        const res = await fetch('/api/config');
+        const config = await res.json();
+        deepgramApiKey = config.deepgramApiKey;
+        globalQuestionsData = config.questionsData;
+      } catch (e) { console.error("Config Load Error:", e); }
+    });
+
+    function validateScreen1() {
+      const name = document.getElementById('regName').value.trim();
+      const tel = document.getElementById('regTel').value.trim();
+      const mail = document.getElementById('regMail').value.trim();
+      const btn = document.getElementById('btnStartUser');
+      if (name && tel && mail) { btn.classList.remove('btn-disabled'); btn.classList.add('btn-primary'); btn.disabled = false; }
+      else { btn.classList.add('btn-disabled'); btn.classList.remove('btn-primary'); btn.disabled = true; }
+    }
+
+    function goToScreen2() {
+      userProfile.name = document.getElementById('regName').value.trim();
+      userProfile.tel = document.getElementById('regTel').value.trim();
+      userProfile.mail = document.getElementById('regMail').value.trim();
+      localStorage.setItem('is_user_profile', JSON.stringify(userProfile));
+      document.getElementById('screen1').classList.remove('active');
+      document.getElementById('screen2').classList.add('active');
+    }
+
+    function updateJobPreview() {
+      const title = document.getElementById('jobTitle').value.trim();
+      const sal = document.getElementById('jobSalary').value.trim();
+      const loc = document.getElementById('jobLocation').value.trim();
+      const kw = document.getElementById('jobKeywords').value.trim();
+      const url = document.getElementById('jobUrl').value.trim();
+      const previewBox = document.getElementById('jobPreviewBox');
+      if (title || sal || loc || kw || url) {
+        previewBox.style.display = 'block';
+        document.getElementById('prevTitle').innerText = title || '';
+        document.getElementById('prevLoc').innerText = loc || '';
+        document.getElementById('prevSal').innerText = sal || '';
+        document.getElementById('prevKw').innerText = kw || '';
+        document.getElementById('prevLocTag').style.display = loc ? 'inline-flex' : 'none';
+        document.getElementById('prevSalTag').style.display = sal ? 'inline-flex' : 'none';
+        document.getElementById('prevKwTag').style.display = kw ? 'inline-flex' : 'none';
+        document.getElementById('prevUrlTag').style.display = url ? 'inline-flex' : 'none';
+      } else { previewBox.style.display = 'none'; }
+    }
+
+    function validateScreen2() {
+      const hook = document.getElementById('hookContent').value;
+      const ssExisting = document.getElementById('ssExisting').value;
+      const btn = document.getElementById('btnStartCall');
+      if (hook && ssExisting) { btn.classList.remove('btn-disabled'); btn.classList.add('btn-primary'); btn.disabled = false; }
+      else { btn.classList.add('btn-disabled'); btn.classList.remove('btn-primary'); btn.disabled = true; }
+    }
+
+    function buildScriptFlow() {
+      if (!globalQuestionsData) return [];
+      const hook = document.getElementById('hookContent').value;
+      const ssExisting = document.getElementById('ssExisting').value;
+      const seminar = document.getElementById('seminarDetail').value || '各種イベント';
+      const jobTitle = document.getElementById('jobTitle').value.trim();
+      let templates = globalQuestionsData.script_templates;
+      let rawFlow = [];
+      if (hook === "過去失注") { rawFlow = templates.lost_deal_flow; }
+      else if (ssExisting && ssExisting !== "なし" && hook === "オーガニック") { rawFlow = templates.ss_existing_flow; }
+      else { rawFlow = templates.default_flow; }
+
+      return rawFlow.map(item => {
+        let text = item.text || "";
+        if (item.phase === "hook_position") { text = jobTitle ? item.text_with_job : item.text_no_job; }
+        text = text.replace("{name}", userProfile.name || "松田").replace("{seminar}", seminar).replace("{jobTitle}", jobTitle ? `${jobTitle}職` : "ご募集中の職種").replace("{ssExisting}", ssExisting);
+        return { ...item, formattedText: text };
+      });
+    }
+
+    function renderCurrentOpeningCard() {
+      if (autoFlowTimer) clearTimeout(autoFlowTimer);
+      if (returnToScriptTimer) clearTimeout(returnToScriptTimer);
+
+      const candidateList = document.getElementById('candidateList');
+      if (currentOpeningIndex < currentScriptFlow.length) {
+        const item = currentScriptFlow[currentOpeningIndex];
+        const label = item.label || "トークスクリプト";
+        const text = item.formattedText;
+        candidateList.innerHTML = `
+          <div class="candidate-option" id="activeResponseOpt" onclick="forceNextStep()">
+            <span class="phase-badge">【${label}】</span><br>
+            ${text}
+          </div>`;
+
+        if (currentOpeningIndex < currentScriptFlow.length - 1) {
+          autoFlowTimer = setTimeout(() => {
+            currentOpeningIndex++;
+            renderCurrentOpeningCard();
+          }, AUTO_FLOW_DELAY_MS);
+        }
+      }
+    }
+
+    function forceNextStep() {
+      if (autoFlowTimer) clearTimeout(autoFlowTimer);
+      if (returnToScriptTimer) clearTimeout(returnToScriptTimer);
+      if (currentOpeningIndex < currentScriptFlow.length - 1) {
+        currentOpeningIndex++;
+        renderCurrentOpeningCard();
+      }
+    }
+
+    async function startCallSession() {
+      let micStream = null, displayStream = null;
+      try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+      catch(e) { alert("マイクの許可が必要です"); return; }
+
+      try {
+        displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        if (!displayStream || displayStream.getAudioTracks().length === 0) {
+          alert("画面共有時に『システム音声を共有』にチェックを入れて選択してください。");
+          return;
+        }
+      } catch(e) { return; }
+
+      document.getElementById('screen2').classList.remove('active');
+      document.getElementById('screen3').classList.add('active');
+
+      const title = document.getElementById('jobTitle').value.trim();
+      const sal = document.getElementById('jobSalary').value.trim();
+      const loc = document.getElementById('jobLocation').value.trim();
+      const kw = document.getElementById('jobKeywords').value.trim();
+      const url = document.getElementById('jobUrl').value.trim();
+      const activeJobBox = document.getElementById('activeJobBox');
+
+      if (title || sal || loc || kw || url) {
+        activeJobBox.style.display = 'block';
+        document.getElementById('activeTitle').innerText = title || '';
+        document.getElementById('activeLoc').innerText = loc || '';
+        document.getElementById('activeSal').innerText = sal || '';
+        document.getElementById('activeKw').innerText = kw || '';
+        document.getElementById('activeLocTag').style.display = loc ? 'inline-flex' : 'none';
+        document.getElementById('activeSalTag').style.display = sal ? 'inline-flex' : 'none';
+        document.getElementById('activeKwTag').style.display = kw ? 'inline-flex' : 'none';
+        document.getElementById('activeUrlTag').style.display = url ? 'inline-flex' : 'none';
+      } else { activeJobBox.style.display = 'none'; }
+
+      currentScriptFlow = buildScriptFlow();
+      currentOpeningIndex = 0;
+      speechTranscriptLogs = [];
+      document.getElementById('chatStream').innerHTML = '';
+      currentActiveBubble = null;
+
+      setupMicSocket(micStream);
+      const sysAudioStream = new MediaStream([displayStream.getAudioTracks()[0]]);
+      setupSysSocket(sysAudioStream);
+
+      renderCurrentOpeningCard();
+    }
+
+    function setupMicSocket(stream) {
+      const wsUrl = `wss://api.deepgram.com/v1/listen?language=ja&model=nova-2&smart_format=true&punctuate=true&interim_results=true`;
+      socketMic = new WebSocket(wsUrl, ['token', deepgramApiKey]);
+      socketMic.onopen = () => {
+        mediaRecorderMic = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        mediaRecorderMic.addEventListener('dataavailable', event => { if (event.data.size > 0 && socketMic.readyState === 1) socketMic.send(event.data); });
+        mediaRecorderMic.start(100);
+      };
+      socketMic.onmessage = message => {
+        const received = JSON.parse(message.data);
+        const transcript = received.channel?.alternatives[0]?.transcript;
+        if (transcript && transcript.trim() !== '') renderSpeechBubble(transcript, received.is_final, 'user');
+      };
+    }
+
+    function setupSysSocket(stream) {
+      const wsUrl = `wss://api.deepgram.com/v1/listen?language=ja&model=nova-2&smart_format=true&punctuate=true&interim_results=true`;
+      socketSys = new WebSocket(wsUrl, ['token', deepgramApiKey]);
+      socketSys.onopen = () => {
+        mediaRecorderSys = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        mediaRecorderSys.addEventListener('dataavailable', event => { if (event.data.size > 0 && socketSys.readyState === 1) socketSys.send(event.data); });
+        mediaRecorderSys.start(100);
+      };
+      socketSys.onmessage = message => {
+        const received = JSON.parse(message.data);
+        const transcript = received.channel?.alternatives[0]?.transcript;
+        if (transcript && transcript.trim() !== '') renderSpeechBubble(transcript, received.is_final, 'partner');
+      };
+    }
+
+    function renderSpeechBubble(text, isFinal, role) {
+      const flow = document.getElementById('chatStream');
+      if (!currentActiveBubble || currentActiveBubble.dataset.role !== role) {
+        currentActiveBubble = document.createElement('div');
+        currentActiveBubble.dataset.role = role;
+        currentActiveBubble.className = (role === 'user' ? 'chat-bubble-operator' : 'chat-bubble-customer') + ' typing-cursor';
+        flow.appendChild(currentActiveBubble);
+      }
+      currentActiveBubble.innerText = text;
+      flow.scrollTop = flow.scrollHeight;
+
+      if (role === 'user' && isFinal) handleUserSpeechLocal(text);
+      if (role === 'partner') handleCustomerSpeech(text, isFinal);
+
+      if (isFinal) {
+        currentActiveBubble.classList.remove('typing-cursor');
+        speechTranscriptLogs.push((role === 'user' ? '【自分】: ' : '【相手】: ') + text);
+        currentActiveBubble = null;
+      }
+    }
+
+    function handleUserSpeechLocal(userText) {}
+
+    async function handleCustomerSpeech(customerText, isFinal) {
+      const cleanText = customerText.trim();
+      if (cleanText.length < 1) return;
+
+      if (autoFlowTimer) clearTimeout(autoFlowTimer);
+      if (returnToScriptTimer) clearTimeout(returnToScriptTimer);
+
+      let localReply = "";
+      let categoryName = "";
+      if (globalQuestionsData && globalQuestionsData.knowledge_base) {
+        for (const item of globalQuestionsData.knowledge_base) {
+          if (item.keywords.some(kw => cleanText.includes(kw))) { 
+            localReply = item.reply; 
+            categoryName = item.category || "相槌・リアクション";
+            break; 
+          }
+        }
+      }
+
+      if (localReply) {
+        const candidateList = document.getElementById('candidateList');
+        const badgeColor = categoryName.includes("Yes") ? "#28a745" : (categoryName.includes("No") ? "#e6a23c" : "#ff4d4f");
+        
+        candidateList.innerHTML = `
+          <div class="candidate-option" id="activeResponseOpt" onclick="forceNextStep()">
+            <span class="phase-badge" style="background-color:${badgeColor};">【${categoryName}】</span><br>
+            ${localReply}
+          </div>`;
+
+        returnToScriptTimer = setTimeout(() => {
+          if (currentOpeningIndex < currentScriptFlow.length - 1) {
+            currentOpeningIndex++;
+            renderCurrentOpeningCard();
+          }
+        }, 2500);
+        return;
+      }
+
+      const objectionKeywords = ["断る", "断り", "導入できない", "買えない", "期待しないで", "資料", "メール", "送って", "ポスト", "ポインタ", "概要", "やってない", "予定がない", "紹介会社", "エージェント", "人材紹介", "使ってる", "間に合って", "結構", "いらない", "忙しい", "時間がない", "料金", "いくら", "高"];
+      const isObjection = objectionKeywords.some(kw => cleanText.includes(kw));
+
+      if (isObjection && isFinal) {
+        fetchOpenAiReplyStreaming(cleanText);
+      }
+    }
+
+    async function fetchOpenAiReplyStreaming(customerText) {
+      if (currentAbortController) currentAbortController.abort();
+      currentAbortController = new AbortController();
+
+      const candidateList = document.getElementById('candidateList');
+      candidateList.innerHTML = `
+        <div class="candidate-option" id="activeResponseOpt" onclick="forceNextStep()">
+          <span class="phase-badge" style="background-color:#ff4d4f;">【切り返し提案】</span><br>
+          生成中...
+        </div>`;
+
+      const activeOpt = document.getElementById('activeResponseOpt');
+
+      const fullCallHistory = speechTranscriptLogs.slice(-6).map(log => {
+        const isUser = log.startsWith('【自分】: ');
+        return {
+          role: isUser ? 'user' : 'partner',
+          text: log.replace(/^【(自分|相手)】: /, '')
+        };
+      });
+
+      const currentPhase = currentScriptFlow[currentOpeningIndex] || {};
+
+      try {
+        const response = await fetch('/api/generate-reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: currentAbortController.signal,
+          body: JSON.stringify({
+            customerSpeech: customerText,
+            fullCallHistory: fullCallHistory,
+            currentPhaseLabel: currentPhase.label || '',
+            jobInfo: { title: document.getElementById('jobTitle').value.trim(), salary: document.getElementById('jobSalary').value.trim() },
+            partnerInfo: { hook: document.getElementById('hookContent').value, ssExisting: document.getElementById('ssExisting').value }
+          })
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let accumulatedReply = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const lines = decoder.decode(value).split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+              try {
+                const data = JSON.parse(line.replace('data: ', ''));
+                if (data.content) { 
+                  accumulatedReply += data.content; 
+                  activeOpt.innerHTML = `<span class="phase-badge" style="background-color:#ff4d4f;">【切り返し提案】</span><br>${accumulatedReply}`;
+                }
+              } catch (e) {}
+            }
+          }
+        }
+      } catch (e) { if (e.name !== 'AbortError') console.error('OpenAI Stream Error:', e); }
+    }
+
+    function endCallSession() {
+      if (autoFlowTimer) clearTimeout(autoFlowTimer);
+      if (returnToScriptTimer) clearTimeout(returnToScriptTimer);
+      if (mediaRecorderMic && mediaRecorderMic.state !== 'inactive') mediaRecorderMic.stop();
+      if (mediaRecorderSys && mediaRecorderSys.state !== 'inactive') mediaRecorderSys.stop();
+      if (socketMic && socketMic.readyState === 1) socketMic.close();
+      if (socketSys && socketSys.readyState === 1) socketSys.close();
+      document.getElementById('screen3').classList.remove('active');
+      document.getElementById('screen4').classList.add('active');
+      document.getElementById('transcriptSummaryText').innerText = speechTranscriptLogs.length > 0 ? speechTranscriptLogs.join('\n\n') : "通話ログはありません";
+    }
+
+    function copyTranscript() {
+      navigator.clipboard.writeText(document.getElementById('transcriptSummaryText').innerText).then(() => { alert("文字起こしログ全文をコピーしました！"); });
+    }
+
+    // ★ アポ獲得成功時にログを自動保存して学習データに組み込む
+    async function generateMemoAndAutoLearn() {
+      try { 
+        await navigator.clipboard.writeText(document.getElementById('transcriptSummaryText').innerText); 
+      } catch (e) {}
+
+      // サーバーへアポ獲得ログを送信して自動追加・学習
+      if (speechTranscriptLogs.length > 0) {
+        fetch('/api/save-success-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcriptLogs: speechTranscriptLogs })
+        }).then(res => res.json()).then(data => {
+          console.log("成功ログ追加完了:", data);
+        }).catch(e => console.error("ログ保存エラー:", e));
+      }
+
+      window.open(GEM_MEMO_URL, '_blank');
+      resetToScreen2();
+    }
+
+    function resetToScreen2() {
+      if (autoFlowTimer) clearTimeout(autoFlowTimer);
+      if (returnToScriptTimer) clearTimeout(returnToScriptTimer);
+      speechTranscriptLogs = [];
+      document.getElementById('chatStream').innerHTML = "";
+
+      document.getElementById('jobTitle').value = "";
+      document.getElementById('jobSalary').value = "";
+      document.getElementById('jobLocation').value = "";
+      document.getElementById('jobKeywords').value = "";
+      document.getElementById('jobUrl').value = "";
+
+      document.getElementById('hookContent').selectedIndex = 0;
+      document.getElementById('ssExisting').selectedIndex = 0;
+      document.getElementById('seminarDetail').selectedIndex = 0;
+
+      document.getElementById('jobPreviewBox').style.display = "none";
+      validateScreen2();
+
+      document.getElementById('screen4').classList.remove('active');
+      document.getElementById('screen2').classList.add('active');
+    }
+  </script>
+</body>
+</html>
