@@ -183,10 +183,13 @@
         validateScreen1();
       }
       try {
-        const res = await fetch('/api/config');
-        const config = await res.json();
+        const resConfig = await fetch('/api/config');
+        const config = await resConfig.json();
         deepgramApiKey = config.deepgramApiKey;
-        globalQuestionsData = config.questionsData;
+
+        // ★/api/questions からしっかり questions.json を読み込むように修正
+        const resQuestions = await fetch('/api/questions');
+        globalQuestionsData = await resQuestions.json();
       } catch (e) { console.error("Config Load Error:", e); }
     });
 
