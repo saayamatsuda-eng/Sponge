@@ -237,24 +237,33 @@
     }
 
     function buildScriptFlow() {
-      if (!globalQuestionsData) return [];
-      const hook = document.getElementById('hookContent').value;
-      const ssExisting = document.getElementById('ssExisting').value;
-      const seminar = document.getElementById('seminarDetail').value || '各種イベント';
-      const jobTitle = document.getElementById('jobTitle').value.trim();
-      let templates = globalQuestionsData.script_templates;
-      let rawFlow = [];
-      if (hook === "過去失注") { rawFlow = templates.lost_deal_flow; }
-      else if (ssExisting && ssExisting !== "なし" && hook === "オーガニック") { rawFlow = templates.ss_existing_flow; }
-      else { rawFlow = templates.default_flow; }
+  if (!globalQuestionsData) return;
 
-      return rawFlow.map(item => {
-        let text = item.text || "";
-        if (item.phase === "hook_position") { text = jobTitle ? item.text_with_job : item.text_no_job; }
-        text = text.replace("{name}", userProfile.name || "松田").replace("{seminar}", seminar).replace("{jobTitle}", jobTitle ? `${jobTitle}職` : "ご募集中の職種").replace("{ssExisting}", ssExisting);
-        return { ...item, formattedText: text };
-      });
-    }
+  // スプレッドシートから「質問フロー」のデータを取り出す
+  const flowItems = globalQuestionsData.filter(item => 
+    item.type === '質問フロー' || item.category === '質問フロー'
+  );
+
+  if (flowItems.length === 0) return;
+
+  // 10秒ごとに順番に表示するトークスクリプトを作成
+  currentScriptFlow = flowItems.map(item => {
+    let scriptText = item.response_script || item.topic || '';
+    
+    // 名前の置き換え処理
+    const userName = document.getElementById('userName').value || '松田';
+    const company = document.getElementById('companyName').value || '〇〇';
+    scriptText = scriptText.replace(/〇〇/g, company).replace(/松田/g, userName);
+
+    return {
+      text: scriptText,
+      label: item.topic || '導入・挨拶'
+    };
+  });
+
+  currentOpeningIndex = 0;
+  renderCurrentOpeningCard();
+}
 
     function renderCurrentOpeningCard() {
       if (autoFlowTimer) clearTimeout(autoFlowTimer);
